@@ -1,0 +1,135 @@
+mshub: 1
+id: ms.s1.acquisition-eval
+name: MS acquisition parameter evaluation
+version: 1.0.0
+kind: tool
+stage: s1
+summary: Evaluate Thermo raw acquisition parameters (TopN, AGC, MIT, FWHM, cleavage QC) from 11 search engines with bilingual reports.
+description: |
+  A configuration-driven pipeline that reads Thermo .raw files (FAIMS or conventional)
+  and search results from 11 engines (pFind, MaxQuant, Comet, MSFragger, Sage,
+  MetaMorpheus, Mascot, PEAKS, pNovo, X!Tandem, isoPSV unified), producing per-group
+  Word evaluation reports containing raw-embedded method parameters, per-fraction QC,
+  MS2 injection time distribution, identification statistics, cleavage specificity,
+  missed-cleavage distribution, peptide FWHM (via .ms1 XIC or rawdump --xic RAW
+  direct-read), and enzyme autolysis BPC annotation. Supports Chinese/English bilingual
+  output. Cleavage QC is computed from FASTA when the engine doesn't provide it
+  (99.71% specificity / 99.99% missed-cleavage match vs pFind ground truth).
+
+license: Apache-2.0
+authors:
+  - name: Songhao Jiang
+    url: https://github.com/Songhao-Jiang
+maintainers:
+  - name: Songhao Jiang
+    url: https://github.com/Songhao-Jiang
+
+source:
+  repo: https://github.com/AI4MSOmics/eval_ms_pipeline_repo
+  ref: v1.0.0
+
+runtime:
+  type: python
+  entrypoint: ["python", "eval_ms_pipeline.py"]
+  resources:
+    memory: 2Gi
+    timeout: 30m
+
+tools:
+  - name: run_evaluation
+    title: Run evaluation pipeline
+    description: Run the full evaluation for a configured dataset. Produces Word reports, figures, and summary TSVs.
+    input_schema: schemas/input.json
+    output_schema: schemas/output.json
+    annotations:
+      read_only: false
+      destructive: false
+      idempotent: true
+      open_world: false
+  - name: detect_engine
+    title: Auto-detect search engine
+    description: Detect the search engine from result file column names.
+    input_schema: schemas/engine_detect_input.json
+    output_schema: schemas/engine_detect_output.json
+    annotations:
+      read_only: true
+      destructive: false
+      idempotent: true
+      open_world: false
+
+io:
+  inputs:
+    - name: raw_files
+      media_type: application/octet-stream
+      description: Directory of Thermo .raw files (FAIMS or conventional)
+    - name: search_results
+      media_type: text/tab-separated-values
+      description: Search engine results (pFind, MaxQuant msms.txt, Comet pep.txt, etc.)
+    - name: protein_fasta
+      media_type: text/x-fasta
+      optional: true
+      description: Protein database for cleavage QC computation (required for non-pFind engines)
+  outputs:
+    - name: evaluation_report
+      media_type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+      description: Per-group Word evaluation report (5 sections, bilingual)
+    - name: method_parameters
+      media_type: text/tab-separated-values
+      description: Raw-embedded instrument method parameters
+    - name: group_summary
+      media_type: text/tab-separated-values
+      description: Cross-group comparison TSV
+    - name: figures
+      media_type: image/png
+      description: Per-fraction QC panels, summary figures, BPC with autolysis annotation
+
+requires:
+  - ms.x.convert
+provides:
+  - qc.acquisition-eval
+
+capabilities:
+  - slot: qc.acquisition-eval
+    priority: 80
+
+evaluation:
+  datasets:
+    - id: mga-gastri-faims
+      description: M. gastri FAIMS dual-CV, 2 injections, LysargiNase+LysN
+    - id: ntm-mab-mch
+      description: M. abscessus and M. chelonae, 4 groups (LL/TL × 2 species), 6-7 fractions
+    - id: candida-913
+      description: Candida auris, QE HF, 13 fractions, Trypsin + LysargiNase
+  metrics:
+    - name: engine_autodetect_accuracy
+      target: ">=0.95"
+      direction: maximize
+    - name: cleavage_specificity_match_vs_pfind
+      target: ">=0.99"
+      direction: maximize
+    - name: missed_cleavage_match_vs_pfind
+      target: ">=0.99"
+      direction: maximize
+    - name: fwhm_valid_fraction
+      target: ">=0.8"
+      direction: maximize
+  minimum_tier: experimental
+
+security:
+  network: none
+  filesystem: read-write
+  secrets: none
+  approval: never
+  data_classification: internal
+
+compatibility:
+  os: [windows/amd64]
+  python: ">=3.8"
+
+citations:
+  - text: ThermoFisher RawFileReader for .raw file access.
+    url: https://planetorbitrap.com/rawfilereader
+  - text: isoPSV multi-engine competitive matching platform (search engine adapters).
+    url: https://github.com/Songhao-Jiang/isoPSV
+  - text: MSHub capability hub specification and plugin schema.
+    url: https://github.com/AI4MSOmics/MSHub

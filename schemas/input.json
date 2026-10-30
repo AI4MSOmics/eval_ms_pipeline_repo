@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/AI4MSOmics/eval_ms_pipeline_repo/main/schemas/input.json",
+  "title": "eval_ms_pipeline input",
+  "description": "Input parameters for the MS acquisition parameter evaluation pipeline.",
+  "type": "object",
+  "required": ["dataset", "raw_dir", "result_path", "label", "enzyme"],
+  "properties": {
+    "dataset": {
+      "type": "string",
+      "description": "Dataset name (unique key in DATASETS configuration)."
+    },
+    "raw_dir": {
+      "type": "string",
+      "description": "Directory containing Thermo .raw files (absolute path)."
+    },
+    "result_path": {
+      "type": "string",
+      "description": "Path to search results: pFind result directory, msms.txt, results.sage.tsv, etc."
+    },
+    "label": {
+      "type": "string",
+      "description": "Group label shown in report title. Chinese characters produce Chinese reports."
+    },
+    "enzyme": {
+      "type": "string",
+      "description": "Enzyme description, e.g. 'Trypsin (KR_C)' or 'LysargiNase (KR_N)'."
+    },
+    "enzyme_rule": {
+      "type": "string",
+      "enum": ["KR_C", "KR_N"],
+      "description": "Enzyme cleavage rule for FASTA-based QC. KR_C = Trypsin (after K/R). KR_N = LysargiNase (before K/R)."
+    },
+    "engine": {
+      "type": "string",
+      "enum": ["auto", "pfind", "maxquant", "comet", "msfragger", "sage", "metamorpheus", "mascot", "peaks", "pnovo", "xtandem", "isopsv"],
+      "default": "auto",
+      "description": "Search engine. Omit or 'auto' for column-fingerprint auto-detection."
+    },
+    "fasta": {
+      "type": "string",
+      "description": "Path to protein database FASTA. Enables cleavage QC computation for non-pFind engines."
+    },
+    "fraction_pattern": {
+      "type": ["string", "null"],
+      "description": "Regex to extract fraction number from raw filename stem. null for single-injection data."
+    },
+    "id_pattern": {
+      "type": ["string", "null"],
+      "description": "Regex to extract (fraction, CV) from search result File_Name. null for single-CV data."
+    },
+    "autolysis_pattern": {
+      "type": "string",
+      "description": "Regex for enzyme protein IDs in Proteins column, e.g. 'CON_LysargiNase|CON_SL_LysN'."
+    },
+    "autolysis_label": {
+      "type": "string",
+      "description": "Label for autolysis peptides in report."
+    },
+    "language": {
+      "type": "string",
+      "enum": ["zh", "en"],
+      "description": "Report language. Auto-detected from label text if not specified."
+    },
+    "has_ms1": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if .ms1 files exist (uses XIC streaming for FWHM). Default false (rawdump --xic)."
+    },
+    "faims_cv_colors": {
+      "type": "object",
+      "description": "FAIMS CV to matplotlib color mapping, e.g. {\"45V\": \"tab:red\", \"65V\": \"tab:orange\"}."
+    },
+    "output_dir": {
+      "type": "string",
+      "description": "Output directory for reports and figures."
+    }
+  }
+}

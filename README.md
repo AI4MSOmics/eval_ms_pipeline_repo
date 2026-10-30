@@ -1,183 +1,87 @@
 # eval_ms_pipeline
 
-**质谱采集参数评估流水线 / Mass spectrometry acquisition parameter evaluation pipeline**
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![MSHub Plugin](https://img.shields.io/badge/MSHub-ms.s1.acquisition--eval-teal)](plugin.yaml)
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Engines: 11](https://img.shields.io/badge/Engines-11-blue)](#supported-engines)
-[![Languages: zh/en](https://img.shields.io/badge/Reports-zh%2Fen-green)](#bilingual)
+> **MSHub capability pack** for mass spectrometry acquisition parameter evaluation.
+> Part of the [AI4MSOmics](https://github.com/AI4MSOmics) ecosystem.
+> See [MSHub](https://github.com/AI4MSOmics/MSHub) for the hub specification.
 
-一个 GitHub 项目，两种 AI 代理集成方式（ZCode skill + DeepSeek/通用 agent tool），同一条命令出全流程质谱参数评估报告。
+A configuration-driven pipeline that reads Thermo `.raw` files and search results from **11 engines**, producing per-group bilingual evaluation reports with method parameters, per-fraction QC, MIT distribution, cleavage QC, peptide FWHM, and enzyme autolysis annotation.
 
-One GitHub project, two AI agent integrations (ZCode skill + DeepSeek/universal agent tool), one command for full MS parameter evaluation reports.
-
-## 安装 / Install
+## Installation
 
 ```bash
-git clone https://github.com/your-username/eval_ms_pipeline.git
-cd eval_ms_pipeline
+git clone https://github.com/AI4MSOmics/eval_ms_pipeline_repo.git
+cd eval_ms_pipeline_repo
 bash install.sh
 ```
 
-## 两种使用方式 / Two Integration Paths
+## Usage — three integration paths
 
-### 方式 1：ZCode Skill
+### 1. MSHub skill card
+
+This repository follows the [MSHub plugin specification](https://github.com/AI4MSOmics/MSHub/blob/main/docs/03-plugin-spec.md). The [SKILL.md](SKILL.md) at the root is the MSHub-format skill card.
+
+### 2. ZCode / Claude / Cursor / DeepSeek skill
+
+Copy `zcode/` to your agent's skills directory:
 
 ```bash
-# 将 zcode/ 目录复制到 ZCode skills 目录
 cp -r zcode/ ~/.zcode/skills/eval_ms_pipeline/
-
-# 在 ZCode 中直接对话使用
-# "帮我评估 E:\test\mydata 的质谱参数"
-# ZCode 会自动识别 skill 并调用流水线
 ```
 
-详见 [zcode/SKILL.md](zcode/SKILL.md)
+Or configure `agent/tool_manifest.json` for DeepSeek / OpenAI function calling (see [agent/deepseek_guide.md](agent/deepseek_guide.md)).
 
-### 方式 2：DeepSeek / 通用 AI Agent
+### 3. Standalone CLI
 
 ```bash
-# 将 agent/tool_manifest.json 配置到你的 AI 代理框架
-# 将 agent/system_prompt.md 设为系统提示词
-# 代理即可调用 eval_ms_pipeline 工具
+python eval_ms_pipeline.py <dataset_name>
 ```
 
-详见 [agent/deepseek_guide.md](agent/deepseek_guide.md)
+## Supported engines
 
-### 方式 3：直接运行（无需 AI）
+| Engine | Input | Auto-detect | Cleavage QC | FWHM |
+|--------|-------|:-----------:|:-----------:|:----:|
+| pFind 3.x | `pFind-Filtered.spectra` | ✅ | ✅ native | .ms1 or rawdump |
+| MaxQuant | `msms.txt` | ✅ | ✅ MC column | rawdump |
+| Comet | `pep.txt` | ❌ | ✅ FASTA | rawdump |
+| MSFragger | `.tsv` | ❌ | ✅ FASTA | rawdump |
+| Sage | `results.sage.tsv` | ✅ | ✅ FASTA | rawdump |
+| MetaMorpheus | `AllPeptides.psmtsv` | ✅ | ✅ MC column | rawdump |
+| Mascot | `.csv` | ❌ | ✅ FASTA | rawdump |
+| PEAKS | `.csv` | ❌ | ✅ FASTA | rawdump |
+| pNovo | via isoPSV | ❌ | ✅ FASTA | rawdump |
+| X!Tandem | via isoPSV | ❌ | ✅ FASTA | rawdump |
+| isoPSV unified | adapter `.tsv` | ✅ | ✅ FASTA | rawdump |
 
-```bash
-python eval_ms_pipeline.py mydata
-```
+## Key features
 
-## 功能 / Features
+| Feature | Method | Verified on |
+|---------|--------|-------------|
+| Cleavage QC from FASTA | KR_N / KR_C rules, Met-cleavage aware | 99.71% specificity / 99.99% MC match vs pFind |
+| Peptide FWHM (no .ms1) | `rawdump --xic` RAW direct-read | M. gastri, NTM (no .ms1 files) |
+| MIT distribution | Per-CV histogram + saturation | NTM (93% saturation at MIT 22ms), M. gastri R2 (12.5% at 80ms) |
+| Bilingual reports | Auto-detect from config text or `lang` field | M. gastri (zh + en) |
+| Engine auto-detect | Column-fingerprint matching | 4 datasets, 13 groups, all correct |
 
-| 功能 | 方法 | 依赖 |
-|------|------|------|
-| raw 内嵌方法提取 | rawmethod.exe → ExportInstrumentMethod | Thermo .raw |
-| 逐扫描采集参数 | rawdump.exe → IT/AGC/TIC/CV/master_scan | Thermo .raw |
-| TopN/AGC Fill/解析率 | 主洗脱段 [25%–90%] 统计 | rawdump 输出 |
-| MIT 分布 | 逐 CV 直方图 + 触顶率 | rawdump 输出 |
-| 酶切特异性/漏切 | 引擎原生列或 FASTA 补算 | 搜库结果 (+ FASTA) |
-| 肽段半峰宽 | .ms1 XIC 或 rawdump --xic RAW 直读 | .ms1 或 rawdump |
-| 酶自切肽 BPC | XIC apex 标注 | 搜库结果 + 酶蛋白 ID |
-| 中英文双语报告 | 自动检测或 lang 字段 | 无 |
+## Documentation
 
-## Supported Engines / 支持的搜索引擎
-
-| Engine | Result file | Auto-detect | Cleavage QC |
-|--------|------------|-------------|-------------|
-| pFind 3.x | `pFind-Filtered.spectra` | ✅ | ✅ Native |
-| MaxQuant | `msms.txt` | ✅ | ✅ MC column |
-| Comet | `pep.txt` | ❌ | ✅ Via FASTA |
-| MSFragger | `.tsv` | ❌ | ✅ Via FASTA |
-| Sage | `results.sage.tsv` | ✅ | ✅ Via FASTA |
-| MetaMorpheus | `AllPeptides.psmtsv` | ✅ | ✅ MC column |
-| Mascot | `.csv` | ❌ | ✅ Via FASTA |
-| PEAKS | `.csv` | ❌ | ✅ Via FASTA |
-| pNovo | via isoPSV | ❌ | ✅ Via FASTA |
-| X!Tandem | via isoPSV | ❌ | ✅ Via FASTA |
-| isoPSV unified | adapter `.tsv` | ✅ | ✅ Via FASTA |
-
-## Quick Start / 快速开始
-
-### 1. 添加配置
-
-```python
-# 在 eval_ms_pipeline.py 的 DATASETS 中添加
-DATASETS['mydata'] = dict(
-    out=r'E:\test\mydata\output',
-    groups={
-        'mygroup': dict(
-            label='mygroup (sample description)',
-            enz='Trypsin (KR_C)',
-            color='tab:blue',
-            cv_colors={'45V': 'tab:red', '65V': 'tab:orange'},
-            cv_off={'45V': -1, '65V': 1},
-            datadir=r'E:\test\mydata\raw',
-            result=r'E:\test\mydata\pfind\result',
-            frac_pat=r'_F(\d+)_90min',
-            id_pat=r'_F(\d+)_90min',
-            autol_pat='TRYP_PIG|TRY1_BOVIN',
-            autol_cn='enzyme autolysis peptides',
-            # Optional
-            # engine='maxquant',           # or 'sage', 'comet', etc.
-            # fasta='protein.fasta',       # triggers cleavage QC computation
-            # enz_rule='KR_C',             # or 'KR_N' for LysargiNase
-            # lang='en',                   # or 'zh' for Chinese report
-        ),
-    })
-```
-
-### 2. 运行
-
-```bash
-python eval_ms_pipeline.py mydata
-```
-
-### 3. 查看输出
-
-```
-output/
-├── mygroup_ms_parameter_report.docx   # 5-section report
-├── method_mygroup.tsv
-├── group_summary.tsv
-├── figs_frac/
-├── figs_summary/
-└── figs_BPC/
-```
-
-## Documentation / 说明文档
-
-| 文档 | 语言 | 内容 |
-|------|------|------|
+| Document | Language | Description |
+|----------|----------|-------------|
+| [SKILL.md](SKILL.md) | English | MSHub skill card (agent-facing) |
 | [docs/guide_zh.md](docs/guide_zh.md) | 中文 | 详细使用指南（10 节） |
 | [docs/guide_en.md](docs/guide_en.md) | English | Detailed user guide (10 sections) |
-| [docs/configuration.md](docs/configuration.md) | 双语 | 配置参考 |
-| [docs/troubleshooting.md](docs/troubleshooting.md) | 双语 | 排错指南 |
+| [docs/configuration.md](docs/configuration.md) | 双语 | Configuration reference |
+| [docs/troubleshooting.md](docs/troubleshooting.md) | 双语 | Troubleshooting |
+| [plugin.yaml](plugin.yaml) | YAML | MSHub capability pack manifest |
+| [schemas/](schemas/) | JSON | Input/output JSON Schemas |
 
-## Related Projects / 相关项目
+## Related projects
 
-- [isoPSV](https://github.com/Songhao-Jiang/isoPSV) — Multi-engine competitive peptide spectrum matching platform
-
-## Project Structure / 项目结构
-
-```
-eval_ms_pipeline/
-├── README.md                    # This file
-├── LICENSE                      # MIT
-├── install.sh                   # One-command installer
-│
-├── eval_ms_pipeline.py          # Main pipeline (single file, ~1300 lines)
-├── xic_raw.py                   # rawdump --xic Python wrapper
-│
-├── zcode/                       # ZCode Skill integration
-│   └── SKILL.md                 # YAML frontmatter + usage instructions
-│
-├── agent/                       # AI Agent integration (DeepSeek, Claude, etc.)
-│   ├── tool_manifest.json       # OpenAI function calling schema
-│   ├── system_prompt.md         # System prompt for AI agents
-│   └── deepseek_guide.md        # DeepSeek-specific setup guide
-│
-├── tools/                       # Prebuilt binary tools
-│   ├── rawdump.exe              # Scan dump + XIC mode
-│   └── rawmethod.exe            # Raw method extraction
-│
-├── src/                         # C# source (for rebuilding)
-│   ├── rawdump/
-│   └── rawmethod/
-│
-├── docs/                        # Documentation
-│   ├── guide_zh.md              # 中文指南
-│   ├── guide_en.md              # English guide
-│   ├── configuration.md         # Config reference
-│   └── troubleshooting.md       # Troubleshooting
-│
-└── examples/                    # Configuration examples
-    ├── config_mga.py            # FAIMS dual-CV
-    ├── config_ntm.py            # Multi-group + enzyme mini-DB
-    └── config_913.py            # QE HF, .ms1 XIC
-```
+- [MSHub](https://github.com/AI4MSOmics/MSHub) — Agent-native capability hub for MS proteomics
+- [isoPSV](https://github.com/Songhao-Jiang/isoPSV) — Multi-engine competitive peptide spectrum matching
 
 ## License
 
-MIT
+Apache-2.0. See [LICENSE](LICENSE).

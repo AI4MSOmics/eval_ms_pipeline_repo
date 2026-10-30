@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/AI4MSOmics/eval_ms_pipeline_repo/main/schemas/output.json",
+  "title": "eval_ms_pipeline output",
+  "description": "Output artifacts from the MS acquisition parameter evaluation pipeline.",
+  "type": "object",
+  "required": ["evaluation_report", "group_summary"],
+  "properties": {
+    "evaluation_report": {
+      "type": "object",
+      "description": "Per-group Word evaluation report.",
+      "properties": {
+        "path": { "type": "string", "description": "File path of the .docx report." },
+        "sections": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Report section titles (5 sections)."
+        }
+      }
+    },
+    "method_parameters": {
+      "type": "object",
+      "description": "Raw-embedded instrument method parameters.",
+      "properties": {
+        "path": { "type": "string", "description": "TSV file path." },
+        "cv_segments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "cv": { "type": "string", "description": "FAIMS CV value, e.g. '-45'." },
+              "resolution_ms1": { "type": "integer", "description": "MS1 resolution setting." },
+              "resolution_ms2": { "type": "integer", "description": "MS2 resolution setting." },
+              "agc_ms1": { "type": "string", "description": "MS1 AGC target (%)." },
+              "agc_ms2": { "type": "string", "description": "MS2 AGC target (%)." },
+              "mit_ms1": { "type": "number", "unit": "ms", "description": "MS1 max injection time." },
+              "mit_ms2": { "type": "number", "unit": "ms", "description": "MS2 max injection time." },
+              "cycle_time": { "type": "number", "unit": "s", "description": "Method cycle time." },
+              "nce": { "type": "number", "description": "Normalized collision energy." }
+            }
+          }
+        }
+      }
+    },
+    "group_summary": {
+      "type": "object",
+      "description": "Cross-group comparison metrics.",
+      "properties": {
+        "path": { "type": "string", "description": "TSV file path." },
+        "groups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": { "type": "string" },
+              "fraction_count": { "type": "integer" },
+              "topn_mean": { "type": "object", "description": "Per-CV mean TopN." },
+              "id_rate_range": { "type": "object", "description": "Per-CV ID rate range (%)." },
+              "it_saturation_mean": { "type": "object", "description": "Per-CV IT saturation (%)." },
+              "psm_count": { "type": "integer", "description": "Total PSMs (REV_/CON_ excluded)." },
+              "peptide_count": { "type": "integer", "description": "Unique peptide sequences." },
+              "protein_count": { "type": "integer", "description": "Unique protein IDs." },
+              "overall_id_rate": { "type": "number", "unit": "%", "description": "Overall spectrum identification rate." },
+              "fully_specific_pct": { "type": "number", "unit": "%", "description": "PSM-level fully enzyme-specific fraction." },
+              "fully_cleaved_pct": { "type": "number", "unit": "%", "description": "PSM-level 0 missed-cleavage fraction." }
+            }
+          }
+        }
+      }
+    },
+    "figures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string", "description": "PNG file path." },
+          "type": {
+            "type": "string",
+            "enum": ["frac_quad", "topn_summary", "agc_fill_summary", "rate_rt_summary", "mit_dist", "fwhm_summary", "bpc"],
+            "description": "Figure type."
+          },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "engine_detected": {
+      "type": "string",
+      "description": "Search engine detected or specified."
+    },
+    "report_language": {
+      "type": "string",
+      "enum": ["zh", "en"],
+      "description": "Report language used."
+    }
+  }
+}
