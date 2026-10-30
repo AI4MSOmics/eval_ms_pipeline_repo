@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "eval_ms_pipeline",
+  "description": "Mass spectrometry acquisition parameter evaluation pipeline. Evaluates TopN, AGC Fill, injection time, identification rate, cleavage specificity, missed cleavages, peak width (FWHM), and MIT distribution from Thermo raw files and search results.",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "run_evaluation",
+        "description": "Run the full evaluation pipeline for a configured dataset. Produces Word reports, figures, and summary TSVs.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "dataset": {
+              "type": "string",
+              "description": "Dataset name configured in DATASETS dict (e.g., 'Mga', 'NTM', '913')"
+            },
+            "output_dir": {
+              "type": "string",
+              "description": "Output directory (optional, overrides DATASETS config)"
+            },
+            "lang": {
+              "type": "string",
+              "enum": ["zh", "en"],
+              "description": "Report language: 'zh' for Chinese, 'en' for English (optional, auto-detected by default)"
+            }
+          },
+          "required": ["dataset"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "add_dataset",
+        "description": "Add a new dataset configuration to the pipeline.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Dataset name (unique key)"
+            },
+            "output_dir": {
+              "type": "string",
+              "description": "Output directory path"
+            },
+            "raw_dir": {
+              "type": "string",
+              "description": "Directory containing Thermo .raw files"
+            },
+            "result_path": {
+              "type": "string",
+              "description": "Path to search results (pFind result dir, msms.txt, results.sage.tsv, etc.)"
+            },
+            "engine": {
+              "type": "string",
+              "enum": ["auto", "pfind", "maxquant", "comet", "msfragger", "sage", "metamorpheus", "mascot", "peaks", "pnovo", "xtandem", "isopsv"],
+              "description": "Search engine (default: auto-detect)"
+            },
+            "label": {
+              "type": "string",
+              "description": "Group label for report title. Chinese characters produce Chinese reports."
+            },
+            "enzyme": {
+              "type": "string",
+              "description": "Enzyme description (e.g., 'Trypsin (KR_C)', 'LysargiNase (KR_N)')"
+            },
+            "enzyme_rule": {
+              "type": "string",
+              "enum": ["KR_C", "KR_N"],
+              "description": "Enzyme cleavage rule: KR_C (Trypsin, cleaves after K/R) or KR_N (LysargiNase, cleaves before K/R)"
+            },
+            "fasta": {
+              "type": "string",
+              "description": "Path to protein database FASTA (enables cleavage QC computation for non-pFind engines)"
+            },
+            "fraction_pattern": {
+              "type": "string",
+              "description": "Regex to extract fraction number from raw filename (e.g., '_F(\\\\d+)_90min'). Use null for single-injection data."
+            },
+            "id_pattern": {
+              "type": "string",
+              "description": "Regex to extract (fraction, CV) from search result File_Name (e.g., '_F(\\\\d+)_(\\\\d+)V')"
+            },
+            "autolysis_pattern": {
+              "type": "string",
+              "description": "Regex for enzyme protein IDs in Proteins column (e.g., 'CON_LysargiNase')"
+            },
+            "language": {
+              "type": "string",
+              "enum": ["zh", "en"],
+              "description": "Report language override"
+            },
+            "has_ms1": {
+              "type": "boolean",
+              "description": "True if .ms1 files exist (uses XIC streaming for FWHM). Default false (uses rawdump --xic)."
+            },
+            "faims_cv_colors": {
+              "type": "object",
+              "description": "FAIMS CV to color mapping (e.g., {\"45V\": \"tab:red\", \"65V\": \"tab:orange\"})"
+            }
+          },
+          "required": ["name", "output_dir", "raw_dir", "result_path", "label", "enzyme"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "list_datasets",
+        "description": "List all configured datasets.",
+        "parameters": {
+          "type": "object",
+          "properties": {}
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "detect_engine",
+        "description": "Auto-detect search engine from result file column names.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "result_path": {
+              "type": "string",
+              "description": "Path to search result file"
+            }
+          },
+          "required": ["result_path"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "get_summary",
+        "description": "Read and return the cross-group summary TSV after evaluation.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "dataset": {
+              "type": "string",
+              "description": "Dataset name"
+            }
+          },
+          "required": ["dataset"]
+        }
+      }
+    }
+  ]
+}

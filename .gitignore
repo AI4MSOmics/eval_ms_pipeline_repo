@@ -1,0 +1,22 @@
+# .gitignore
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+Thumbs.db
+*.raw
+*.ms1
+*.mgf
+*.rar
+*.pf2
+*.tsv
+*.xlsx
+*.docx
+# 但保留示例配置
+!examples/*.py
+# rawdump 编译中间产物
+rawdump/bin/Release/
+rawdump/obj/
+rawmethod_tool/obj/
+.mimosa/
+__pycache__/
